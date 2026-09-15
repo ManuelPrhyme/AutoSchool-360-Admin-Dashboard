@@ -29,28 +29,28 @@ export function SchoolsPage({ onRegenerate }: { onRegenerate: (school: Address) 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white">
-          Registered Schools {schools && <span className="text-slate-500">({schools.length})</span>}
+        <h2 className="text-lg font-semibold text-ink-primary">
+          Registered Schools {schools && <span className="text-ink-secondary">({schools.length})</span>}
         </h2>
         <button
           onClick={() => refresh()}
           disabled={busy}
-          className="rounded-lg bg-slate-700 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-slate-600 disabled:opacity-50"
+          className="btn-neutral text-sm"
         >
           {busy ? 'Loading…' : 'Refresh'}
         </button>
       </div>
 
-      {error && <div className="rounded-lg bg-rose-900/40 px-4 py-3 text-sm text-rose-300">{error}</div>}
+      {error && <div className="alert-danger">{error}</div>}
 
       {schools && schools.length === 0 && (
-        <p className="text-sm text-slate-500">No schools have registered on-chain yet.</p>
+        <p className="text-ink-muted">No schools have registered on-chain yet.</p>
       )}
 
       {schools && schools.length > 0 && (
-        <div className="overflow-x-auto rounded-xl border border-slate-800">
+        <div className="panel">
           <table className="min-w-full text-left text-sm">
-            <thead className="bg-slate-900 text-xs uppercase tracking-wide text-slate-400">
+            <thead className="table-head">
               <tr>
                 <th className="px-4 py-3">School</th>
                 <th className="px-4 py-3">Address</th>
@@ -60,35 +60,35 @@ export function SchoolsPage({ onRegenerate }: { onRegenerate: (school: Address) 
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800 bg-slate-900/60 text-slate-200">
+            <tbody className="table-body">
               {schools.map((s) => (
-                <tr key={s.address} className="hover:bg-slate-800/50">
-                  <td className="px-4 py-3">
-                    <div className="font-semibold">{s.name || '(unnamed)'}</div>
-                    <div className="text-xs text-slate-500">{s.email}</div>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs">{s.address}</td>
-                  <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
-                  <td className="px-4 py-3 text-xs">{s.expiresAt > 0n ? new Date(Number(s.expiresAt) * 1000).toLocaleString() : '—'}</td>
-                  <td className="px-4 py-3 text-xs">{s.status > 0 ? formatDuration(Number(s.remainingSeconds)) : '—'}</td>
-                  <td className="px-4 py-3">
-                    {s.status === 3 && (
-                      <button
-                        onClick={() => onRegenerate(s.address)}
-                        className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-indigo-500"
-                      >
-                        Regenerate code
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                <tr key={s.address} className="hover:bg-surface-hover">
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-ink-primary">{s.name || '(unnamed)'}</div>
+                      <div className="text-xs text-ink-secondary">{s.email}</div>
+                    </td>
+                    <td className="px-4 py-3 code-mono">{s.address}</td>
+                    <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
+                    <td className="px-4 py-3 text-ink-secondary text-xs">{s.expiresAt > 0n ? new Date(Number(s.expiresAt) * 1000).toLocaleString() : '—'}</td>
+                    <td className="px-4 py-3 text-ink-secondary text-xs">{s.status > 0 ? formatDuration(Number(s.remainingSeconds)) : '—'}</td>
+                    <td className="px-4 py-3">
+                      {s.status === 3 && (
+                        <button
+                          onClick={() => onRegenerate(s.address)}
+                          className="btn-brand text-xs"
+                        >
+                          Regenerate code
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 text-ink-muted text-xs sm:grid-cols-4">
         {LICENSE_STATUS.map((l) => (
           <span key={l}>{l}</span>
         ))}

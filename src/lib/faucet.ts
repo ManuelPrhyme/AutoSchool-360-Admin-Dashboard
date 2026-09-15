@@ -11,7 +11,7 @@ export interface GasRequestResult {
  * drip transaction is mined with status 'success' — so a resolved promise means
  * the ETH has actually been sent on-chain (not just queued).
  *
- * Uses EIP-191 personal_sign (Turnkey accounts sign this way natively);
+  * Uses EIP-191 personal_sign (Privy embedded wallets sign this way natively);
  * the faucet server accepts both this and the raw-hash .NET signature.
  */
 export async function requestGasTokens(

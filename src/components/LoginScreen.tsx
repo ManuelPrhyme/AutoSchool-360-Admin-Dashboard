@@ -1,18 +1,19 @@
-import { useTurnkey } from '@turnkey/react-wallet-kit';
+﻿import { usePrivy } from '@privy-io/react-auth';
 
 export function LoginScreen() {
-  const { handleLogin } = useTurnkey();
+  const { login } = usePrivy();
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950">
-      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/60 p-10 text-center shadow-2xl">
-        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600 text-3xl font-black text-white">
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="card" style={{ backgroundColor: 'var(--color-surface-elevated)', borderColor: 'var(--color-surface-border)' }}>
+        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-xl text-3xl font-black text-white" style={{ backgroundColor: 'var(--color-brand-base)' }}>
           A
         </div>
-        <h1 className="text-2xl font-bold text-white">AutoSchool360</h1>
-        <p className="mt-1 text-sm font-medium text-indigo-400">Vendor &amp; Delegate Admin Dashboard</p>
+        <h1 className="text-2xl font-bold text-ink-primary">AutoSchool360</h1>
+        <p className="mt-1 text-sm font-medium text-brand">Vendor &amp; Delegate Admin Dashboard</p>
         <button
-          onClick={() => void handleLogin()}
-          className="mt-8 w-full rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-500"
+          onClick={() => void login({ loginMethods: ['email'] })}
+          className="btn-brand mt-8 w-full"
         >
           Sign in with Email
         </button>

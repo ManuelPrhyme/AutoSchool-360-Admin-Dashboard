@@ -2,6 +2,232 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-slate-950 text-slate-100;
+@layer base {
+  :root {
+    --color-surface-base: #0b1220;
+    --color-surface-card: #111827;
+    --color-surface-elevated: #1a2332;
+    --color-surface-border: #273245;
+    --color-surface-hover: #1f2a3d;
+
+    --color-ink-primary: #f1f5f9;
+    --color-ink-secondary: #94a3b8;
+    --color-ink-muted: #64748b;
+
+    --color-brand-base: #4f46e5;
+    --color-brand-hover: #4338ca;
+    --color-brand-soft: #6366f1;
+
+    --color-ok-soft: rgba(16, 185, 129, 0.15);
+    --color-ok-border: rgba(16, 185, 129, 0.45);
+    --color-ok-text: #6ee7b7;
+
+    --color-warn-soft: rgba(245, 158, 11, 0.15);
+    --color-warn-border: rgba(245, 158, 11, 0.45);
+    --color-warn-text: #fcd34d;
+
+    --color-danger-soft: rgba(239, 68, 68, 0.15);
+    --color-danger-border: rgba(239, 68, 68, 0.45);
+    --color-danger-text: #fca5a5;
+
+    --color-neutral-soft: rgba(100, 116, 139, 0.18);
+    --color-neutral-border: rgba(100, 116, 139, 0.4);
+    --color-neutral-text: #cbd5e1;
+  }
+
+  body {
+    background-color: var(--color-surface-base);
+    color: var(--color-ink-primary);
+  }
+}
+
+/* ── All component classes defined here use only Tailwind utilities ── */
+
+@layer components {
+  /* Buttons */
+  .btn-brand {
+    @apply rounded-lg px-4 py-3 font-semibold text-white transition;
+    background-color: var(--color-brand-base);
+  }
+  .btn-brand:hover {
+    background-color: var(--color-brand-hover);
+  }
+
+  .btn-neutral {
+    @apply rounded-lg px-3 py-1.5 font-semibold text-white transition;
+    background-color: var(--color-neutral-base, #64748b);
+  }
+  .btn-neutral:hover {
+    background-color: #475569;
+  }
+
+  .btn-outline {
+    @apply rounded-lg border px-3 py-2 font-medium transition;
+    border-color: currentColor;
+    color: inherit;
+  }
+  .btn-outline:hover {
+    background-color: var(--color-surface-hover);
+  }
+
+  /* Cards */
+  .card {
+    @apply rounded-xl p-6;
+    background-color: var(--color-surface-card);
+    border: 1px solid var(--color-surface-border);
+  }
+
+  .card-thin {
+    @apply rounded-xl p-4;
+    background-color: var(--color-surface-card);
+    border: 1px solid var(--color-surface-border);
+  }
+
+  .card-elevated {
+    @apply rounded-2xl p-5;
+    background-color: var(--color-surface-elevated);
+    border: 1px solid var(--color-surface-border);
+  }
+
+  /* Badges */
+  .badge {
+    @apply rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+  .badge-neutral {
+    @apply badge;
+    background-color: var(--color-neutral-soft);
+    color: var(--color-neutral-text);
+    border: 1px solid var(--color-neutral-border);
+  }
+  .badge-ok {
+    @apply badge;
+    background-color: var(--color-ok-soft);
+    color: var(--color-ok-text);
+    border: 1px solid var(--color-ok-border);
+  }
+  .badge-warn {
+    @apply badge;
+    background-color: var(--color-warn-soft);
+    color: var(--color-warn-text);
+    border: 1px solid var(--color-warn-border);
+  }
+  .badge-danger {
+    @apply badge;
+    background-color: var(--color-danger-soft);
+    color: var(--color-danger-text);
+    border: 1px solid var(--color-danger-border);
+  }
+
+  /* Tables & panels */
+  .panel {
+    @apply overflow-x-auto rounded-xl;
+    background-color: var(--color-surface-elevated);
+    border: 1px solid var(--color-surface-border);
+  }
+
+  /* Table standard cells (see AutoTable/Table.md §3: header and row cells
+     share one padding token so columns stay aligned; the gutter token
+     lives in the <colgroup> widths + the cell gap). */
+  .table-header-cell {
+    @apply px-4 py-2.5 text-left align-middle;
+  }
+
+  .table-cell {
+    @apply px-4 py-2 align-middle;
+  }
+
+  .table-head {
+    @apply text-xs uppercase tracking-wide;
+    background-color: var(--color-surface-elevated);
+    color: var(--color-ink-secondary);
+  }
+
+  .table-body {
+    @apply divide-y text-sm;
+    color: var(--color-ink-primary);
+    border-color: var(--color-surface-border);
+  }
+
+  /* Forms */
+  .field-label {
+    @apply block text-sm;
+    color: var(--color-ink-secondary);
+  }
+
+  .field-input {
+    @apply mt-1 w-full rounded-lg px-3 py-2 text-sm text-white;
+    background-color: var(--color-surface-elevated);
+    border: 1px solid var(--color-surface-border);
+  }
+
+  .code-mono {
+    @apply font-mono text-xs;
+    color: var(--color-ink-secondary);
+  }
+
+  /* Status dots */
+  .status-dot {
+    @apply rounded-full px-2 py-0.5 text-xs font-semibold;
+  }
+  .status-dot-neutral {
+    @apply status-dot;
+    background-color: var(--color-neutral-soft);
+    color: var(--color-neutral-text);
+    border: 1px solid var(--color-neutral-border);
+  }
+  .status-dot-ok {
+    @apply status-dot;
+    background-color: var(--color-ok-soft);
+    color: var(--color-ok-text);
+    border: 1px solid var(--color-ok-border);
+  }
+  .status-dot-warn {
+    @apply status-dot;
+    background-color: var(--color-warn-soft);
+    color: var(--color-warn-text);
+    border: 1px solid var(--color-warn-border);
+  }
+  .status-dot-danger {
+    @apply status-dot;
+    background-color: var(--color-danger-soft);
+    color: var(--color-danger-text);
+    border: 1px solid var(--color-danger-border);
+  }
+
+  /* Alerts */
+  .alert {
+    @apply rounded-lg p-4 text-sm;
+  }
+  .alert-ok {
+    @apply alert;
+    background-color: var(--color-ok-soft);
+    color: var(--color-ok-text);
+    border: 1px solid var(--color-ok-border);
+  }
+  .alert-warn {
+    @apply alert;
+    background-color: var(--color-warn-soft);
+    color: var(--color-warn-text);
+    border: 1px solid var(--color-warn-border);
+  }
+  .alert-danger {
+    @apply alert;
+    background-color: var(--color-danger-soft);
+    color: var(--color-danger-text);
+    border: 1px solid var(--color-danger-border);
+  }
+
+  /* Text helpers */
+  .text-brand {
+    color: var(--color-brand-soft);
+  }
+  .text-ink-primary {
+    color: var(--color-ink-primary);
+  }
+  .text-ink-secondary {
+    color: var(--color-ink-secondary);
+  }
+  .text-ink-muted {
+    color: var(--color-ink-muted);
+  }
 }

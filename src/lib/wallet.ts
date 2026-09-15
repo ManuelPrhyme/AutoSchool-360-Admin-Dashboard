@@ -1,29 +1,32 @@
 import { createWalletClient, http, type LocalAccount, type WalletClient, type Address } from 'viem';
-import { createAccount } from '@turnkey/viem';
-import { chain, RPC_URL } from './chain';
+import { sepolia } from 'viem/chains';
+import { toViemAccount, type ConnectedWallet } from '@privy-io/react-auth';
+import { RPC_URL } from '../config';
 
 /**
- * Creates a viem LocalAccount backed by the Turnkey embedded wallet
- * (enclave-side signing — the private key never leaves Turnkey),
- * and a WalletClient that signs + broadcasts to Sepolia locally.
+ * Creates a viem WalletClient + LocalAccount for the currently authenticated
+ * Privy embedded wallet. The embedded wallet is provisioned by Privy on first
+ * login; all signing goes through the Privy SDK connector (no raw private key
+ * is held client-side).
+ *
+ * Uses Privy's `toViemAccount` helper so the returned LocalAccount delegates
+ * `signTransaction` and `signMessage` to the Privy connector, making it
+ * fully compatible with viem's `writeContract` for Sepolia writes
+ * (generateCode, deactivateCode, requestGasTokens).
+ *
+ * The returned WalletClient is used for Sepolia writes. For reads we use the
+ * shared publicClient from chain.ts.
  */
-export async function createTurnkeyWalletClient(params: {
-  client: unknown;               // Turnkey SDK client from useTurnkey().client
-  organizationId: string;
-  accountAddress: Address;       // embedded wallet account address to sign with
+export async function createPrivyWalletClient(params: {
+  wallet: ConnectedWallet;
 }): Promise<{ account: LocalAccount; walletClient: WalletClient }> {
-  const account = await createAccount({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    client: params.client as any,
-    organizationId: params.organizationId,
-    signWith: params.accountAddress,
-  });
+  const account = await toViemAccount({ wallet: params.wallet });
 
   const walletClient = createWalletClient({
-    account,
-    chain,
+    chain: sepolia,
     transport: http(RPC_URL),
+    account,
   });
 
-  return { account, walletClient };
+  return { account: account as unknown as LocalAccount, walletClient };
 }
