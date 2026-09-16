@@ -59,9 +59,11 @@ Structure every page top-to-bottom by urgency:
   data and potential actions"). The Total card also reports how many rows are
   currently shown.
 - **Search narrows, never hides.** A single search input filters by code text or
-  school display name (case-insensitive, via `searchCodes` in `kpi.ts`), composes
-  with the state filter (filter first, then search), and its empty state names
-  the query so users understand what happened.
+  school display name (case-insensitive, via `searchCodes` / `searchSchools` in
+  `kpi.ts`), composes with the state filter (filter first, then search), and its
+  empty state names the query so users understand what happened. Both list pages
+  (Codes and Schools) follow the same pattern; the Schools search covers name,
+  email, and address.
 - **Persist chosen filters** across page switches and reloads
   (`localStorage`, validated on read with `parseCodeFilter` so tampered or
   unknown values fall back to `All` — never trust storage round-trips).
@@ -263,3 +265,11 @@ Each page reads like a short story — **What changed? → Why? → What do we d
   (`autoschool360.codesFilter`) with safe parsing on read; search query also
   persists (`autoschool360.codesSearch`); **"✕ Clear filter & search"** reset
   button appears only when the view is narrowed (`hasActiveViewState`).
+- `src/pages/SchoolsPage.tsx` — added the same persistent search
+  (`autoschool360.schoolsSearch`) over name/email/address with a
+  **"✕ Clear search"** escape hatch on the empty state.
+- `src/lib/faucet.ts` — **bug fix:** the signed gas-request message now uses the
+  all-lowercase address. The faucet server lowercases `instanceAddress` and does
+  a case-sensitive `message.includes(addr)` check, so the EIP-55 checksummed
+  address Privy returns triggered "Message does not reference the supplied
+  instanceAddress."

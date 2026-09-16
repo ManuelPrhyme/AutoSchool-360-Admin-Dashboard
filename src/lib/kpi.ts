@@ -60,3 +60,16 @@ export function searchCodes(
 export function hasActiveViewState(filter: CodeFilter, query: string): boolean {
   return filter !== 'all' || query.trim() !== '';
 }
+
+/** Case-insensitive search across a school's name, email, and address.
+ * Empty/whitespace queries return the list unchanged. */
+export function searchSchools(schools: SchoolRow[], query: string): SchoolRow[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return schools;
+  return schools.filter(
+    (s) =>
+      s.name.toLowerCase().includes(q) ||
+      s.email.toLowerCase().includes(q) ||
+      s.address.toLowerCase().includes(q),
+  );
+}

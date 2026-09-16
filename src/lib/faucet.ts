@@ -18,7 +18,13 @@ export async function requestGasTokens(
   account: LocalAccount,
   instanceAddress: Address,
 ): Promise<GasRequestResult> {
-  const message = `Request gas for ${instanceAddress} at ${new Date().toISOString()}`;
+  // The faucet server lowercases instanceAddress and does a CASE-SENSITIVE
+  // `message.includes(addr)` check, so the signed message must contain the
+  // all-lowercase form — not the EIP-55 checksummed address Privy returns.
+  // (Checksum-case mismatch = "Message does not reference the supplied
+  // instanceAddress.")
+  const instanceAddressLower = instanceAddress.toLowerCase();
+  const message = `Request gas for ${instanceAddressLower} at ${new Date().toISOString()}`;
   const signature = await account.signMessage({ message });
 
   const res = await fetch(`${FAUCET_API_URL}/api/faucet/request`, {

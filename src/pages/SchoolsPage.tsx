@@ -5,14 +5,33 @@ import { fetchAllSchools, type SchoolRow } from '../lib/coreReads';
 import { StatusBadge } from '../components/StatusBadge';
 import { LastUpdated } from '../components/LastUpdated';
 import { DataCard, DataCardRow } from '../components/DataCard';
-import { pct, schoolStatusCounts } from '../lib/kpi';
+import { pct, schoolStatusCounts, searchSchools } from '../lib/kpi';
 import { useContractEvents } from '../hooks/useContractEvents';
+
+const SEARCH_STORAGE_KEY = 'autoschool360.schoolsSearch';
+
+function safeGetStoredSchoolSearch(): string {
+  try {
+    return localStorage.getItem(SEARCH_STORAGE_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function safeStoreSchoolSearch(next: string) {
+  try {
+    localStorage.setItem(SEARCH_STORAGE_KEY, next);
+  } catch {
+    /* best-effort */
+  }
+}
 
 export function SchoolsPage({ onRegenerate }: { onRegenerate: (school: Address) => void }) {
   const [schools, setSchools] = useState<SchoolRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
+  const [query, setQuery] = useState<string>(() => safeGetStoredSchoolSearch());
 
   // WebSocket event listener for real-time updates
   useContractEvents({
@@ -44,6 +63,14 @@ export function SchoolsPage({ onRegenerate }: { onRegenerate: (school: Address) 
 
   // KPI headline — DataCamp: lead with the numbers that answer "are we good?"
   const { active: activeCount, grace: graceCount, expired: expiredCount } = schoolStatusCounts(schools ?? []);
+  const shownSchools = schools ? searchSchools(schools, query) : null;
+  const shownCount = shownSchools?.length ?? 0;
+
+  /** Persist the search query so it survives page switches and reloads. */
+  const setQueryPersisted = useCallback((next: string) => {
+    setQuery(next);
+    safeStoreSchoolSearch(next);
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -85,13 +112,38 @@ export function SchoolsPage({ onRegenerate }: { onRegenerate: (school: Address) 
         <p className="text-ink-muted">No schools have registered on-chain yet.</p>
       )}
 
+      {/* Search — same pattern as the codes page: above content, persists,
+          empty state names the query. */}
+      {schools && schools.length > 0 && (
+        <label className="block">
+          <span className="kpi-label">Search by name, email, or address</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQueryPersisted(e.target.value)}
+            placeholder="e.g. Lincoln or 0x1f…"
+            className="field-input mt-1"
+            aria-label="Search schools by name, email, or address"
+          />
+        </label>
+      )}
+
+      {schools && shownSchools && shownSchools.length === 0 && schools.length > 0 && (
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-ink-muted">No schools match "{query.trim()}"</p>
+          <button onClick={() => setQueryPersisted('')} className="btn-outline text-xs">
+            ✕ Clear search
+          </button>
+        </div>
+      )}
+
       {/* Mobile: stacked cards (Toptal stacked-cards pattern).
           Desktop: full table. Same data, two presentations. */}
-      {schools && schools.length > 0 && (
+      {schools && schools.length > 0 && shownSchools && shownSchools.length > 0 && (
         <>
           {/* Stacked cards — small screens */}
           <div className="space-y-2 md:hidden">
-            {schools.map((s) => (
+            {shownSchools.map((s) => (
               <DataCard
                 key={s.address}
                 footer={
@@ -133,7 +185,7 @@ export function SchoolsPage({ onRegenerate }: { onRegenerate: (school: Address) 
                 </tr>
               </thead>
               <tbody className="table-body">
-                {schools.map((s) => (
+                {shownSchools.map((s) => (
                   <tr key={s.address} className="hover:bg-surface-hover">
                     <td className="px-4 py-3">
                       <div className="font-semibold text-ink-primary">{s.name || '(unnamed)'}</div>

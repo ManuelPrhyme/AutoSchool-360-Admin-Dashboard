@@ -6,6 +6,7 @@ import {
   applyCodeFilter,
   parseCodeFilter,
   searchCodes,
+  searchSchools,
   hasActiveViewState,
   type CodeFilter,
 } from './kpi';
@@ -150,6 +151,28 @@ describe('searchCodes', () => {
     const onlyValid = applyCodeFilter(rows, 'valid');
     expect(searchCodes(onlyValid, '222', nameOf)).toEqual([]);
     expect(searchCodes(onlyValid, '111', nameOf)).toHaveLength(1);
+  });
+});
+
+describe('searchSchools', () => {
+  const rows = [school(1), school(2)];
+  rows[0] = { ...rows[0], name: 'Lincoln High', email: 'office@lincoln.example', address: '0x1111' as SchoolRow['address'] };
+  rows[1] = { ...rows[1], name: 'Roosevelt Academy', email: 'hello@roosevelt.example', address: '0x2222' as SchoolRow['address'] };
+
+  it('returns the list unchanged for empty/whitespace queries', () => {
+    expect(searchSchools(rows, '')).toHaveLength(2);
+    expect(searchSchools(rows, '  ')).toHaveLength(2);
+  });
+
+  it('matches name, email, and address case-insensitively', () => {
+    expect(searchSchools(rows, 'lincoln')).toHaveLength(1);
+    expect(searchSchools(rows, 'ROOSEVELT')).toHaveLength(1);
+    expect(searchSchools(rows, 'roosevelt.example')).toHaveLength(1);
+    expect(searchSchools(rows, '0x2222')).toHaveLength(1);
+  });
+
+  it('returns empty when nothing matches', () => {
+    expect(searchSchools(rows, 'hogwarts')).toEqual([]);
   });
 });
 

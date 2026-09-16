@@ -3,3 +3,6 @@ dist
 .env
 .env.local
 *.local
+dev-server.log
+tsconfig.tsbuildinfo
+*.tsbuildinfo
