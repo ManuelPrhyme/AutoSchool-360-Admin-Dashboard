@@ -21,7 +21,10 @@ export function SchoolsPage({ onRegenerate }: { onRegenerate: (school: Address) 
     setBusy(true);
     setError(null);
     try {
-      setSchools(await fetchAllSchools());
+      const rows = await fetchAllSchools();
+      // Sort schools by registeredAt descending (most recently registered first)
+      rows.sort((a, b) => (b.registeredAt > a.registeredAt ? 1 : b.registeredAt < a.registeredAt ? -1 : 0));
+      setSchools(rows);
     } catch (e) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setError((e as any)?.message ?? String(e));
