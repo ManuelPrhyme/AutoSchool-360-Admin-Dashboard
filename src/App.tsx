@@ -142,7 +142,7 @@ export default function App() {
         {page === 'wallet' && <WalletPage />}
         {page === 'schools' && <SchoolsPage onRegenerate={(school) => goToGenerate(school)} />}
         {page === 'codes' && <CodesPage walletClient={walletClient} account={account} />}
-        {page === 'generate' && <GenerateCodePage walletClient={walletClient} prefillSchool={prefillSchool} onGenerated={() => { setPrefillSchool(null); setPage('schools'); }} />}
+        {page === 'generate' && <GenerateCodePage walletClient={walletClient} prefillSchool={prefillSchool} onGenerated={() => { setPrefillSchool(null); setPage('codes'); }} />}
       </main>
     </div>
   );
