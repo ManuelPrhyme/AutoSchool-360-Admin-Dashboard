@@ -46,6 +46,33 @@ Structure every page top-to-bottom by urgency:
 - Primary KPIs at the top; supporting stats below.
 - Progressive disclosure: headline first, drill-down for detail; hide rarely-used
   controls behind a clear "More"/menu.
+- **Filters sit above the content** they control, with short plain labels
+  (DataCamp). The codes page uses a 3-tab segmented control (All / Unused /
+  Consumed) that: shows each tab's result count before you tap, keeps the applied
+  state visible (`aria-selected` + filled brand chip), uses 44px+ touch targets,
+  and explains an empty result instead of rendering a blank region. Filtering
+  logic lives in `src/lib/kpi.ts` (`applyCodeFilter`), so the same rules power
+  mobile cards and the desktop table.
+- **KPI cards are actions, not just numbers.** On the codes page each KPI card is
+  a button that applies its matching filter and clears any active search — the
+  headline connects directly to the workflow (Medium: "direct connection between
+  data and potential actions"). The Total card also reports how many rows are
+  currently shown.
+- **Search narrows, never hides.** A single search input filters by code text or
+  school display name (case-insensitive, via `searchCodes` in `kpi.ts`), composes
+  with the state filter (filter first, then search), and its empty state names
+  the query so users understand what happened.
+- **Persist chosen filters** across page switches and reloads
+  (`localStorage`, validated on read with `parseCodeFilter` so tampered or
+  unknown values fall back to `All` — never trust storage round-trips).
+  Persistence is best-effort: private-mode storage failures degrade silently to
+  defaults. The search query persists the same way
+  (`autoschool360.codesSearch`), so a reload keeps the narrowed view.
+- **Offer an escape hatch.** Whenever the view is narrowed (non-default filter
+  or active search), show a one-tap **"✕ Clear filter & search"** reset button
+  (`hasActiveViewState` in `kpi.ts` gates its visibility — no dead controls on
+  the pristine view). DataCamp: "five precise filters beat fifteen vague
+  ones" — and every applied filter must be easy to undo.
 
 ## 3. Mobile-First Responsive Design (Tableau, Toptal)
 
@@ -89,7 +116,8 @@ There is no cursor on mobile:
 Every action gives clear, predictable feedback:
 
 - **Loading** — buttons show progress ("Requesting…", "Generating…", spinner) and are
-  disabled while busy.
+  disabled while busy. Route-level loading uses a skeleton (`PageSkeleton` in
+  `App.tsx`) that matches the KPI card rhythm — never a blank screen.
 - **Disabled** — grayed-out with a reason (missing wallet, no selection).
 - **Success** — explicit confirmation (`.alert-ok`, "Copied ✓", "Funds sent ✓").
 - **Error** — recoverable message (`.alert-danger` / `.alert-warn`), not a dead end.
@@ -106,6 +134,9 @@ Every action gives clear, predictable feedback:
   stays honest.
 - **Units and precision** — always label units (ETH, days, hours); round to useful
   precision (`formatEth`, `formatDuration`).
+- **Ratios for at-a-glance comparison** — KPI cards show a percentage hint
+  (`pct()` helper: "{n}% of schools" / "{n}% of all codes") so scales are
+  comparable without mental math (Medium: "converting metrics to ratios").
 
 ## 6. Color, Contrast & Accessibility (DataCamp)
 
@@ -212,3 +243,23 @@ Each page reads like a short story — **What changed? → Why? → What do we d
   mobile-card and freshness components.
 - `src/components/CopyShareButtons.tsx` — `ShareButton` accepts `style` for
   token-based theming.
+- `vite.config.ts` — `manualChunks` splits viem, Privy, and React vendors into
+  parallel-loading, independently cached chunks (was one 2.6 MB bundle).
+- `src/App.tsx` — pages are `lazy()`-loaded behind `Suspense` with a KPI-rhythm
+  `PageSkeleton` fallback, so the login screen paints before the web3 bundle
+  arrives (perceived performance; interactive states guideline).
+- `src/pages/SchoolsPage.tsx`, `src/pages/CodesPage.tsx` — KPI cards gained
+  percentage-ratio hints (`pct()` helper) for at-a-glance comparison.
+- `src/lib/kpi.ts` — shared, unit-tested metric helpers (`pct`,
+  `schoolStatusCounts`, `codeStateCounts`, `applyCodeFilter`); single source of
+  truth for KPI math and the codes filter.
+- `src/lib/kpi.test.ts` + `npm test` — vitest suite covering the KPI helpers,
+  every filter branch (`All` / `Unused` / `Consumed`), filter validation
+  (`parseCodeFilter`), and search behavior (`searchCodes`: code text, school
+  name, whitespace, composition with the filter).
+- `src/pages/CodesPage.tsx` — KPI cards became clickable filter shortcuts (with
+  `{shownCount} shown` on the Total card); added the code/school search input;
+  filter choice persists via `localStorage`
+  (`autoschool360.codesFilter`) with safe parsing on read; search query also
+  persists (`autoschool360.codesSearch`); **"✕ Clear filter & search"** reset
+  button appears only when the view is narrowed (`hasActiveViewState`).

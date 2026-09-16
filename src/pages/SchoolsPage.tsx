@@ -5,12 +5,8 @@ import { fetchAllSchools, type SchoolRow } from '../lib/coreReads';
 import { StatusBadge } from '../components/StatusBadge';
 import { LastUpdated } from '../components/LastUpdated';
 import { DataCard, DataCardRow } from '../components/DataCard';
+import { pct, schoolStatusCounts } from '../lib/kpi';
 import { useContractEvents } from '../hooks/useContractEvents';
-
-/** Percentage of total, rounded to a useful precision (DataCamp: "round
- * numbers to a useful precision"). Returns '—' when total is 0. */
-const pct = (part: number, total: number): string =>
-  total === 0 ? '—' : `${Math.round((part / total) * 100)}%`;
 
 export function SchoolsPage({ onRegenerate }: { onRegenerate: (school: Address) => void }) {
   const [schools, setSchools] = useState<SchoolRow[] | null>(null);
@@ -47,9 +43,7 @@ export function SchoolsPage({ onRegenerate }: { onRegenerate: (school: Address) 
   }, [refresh]);
 
   // KPI headline — DataCamp: lead with the numbers that answer "are we good?"
-  const activeCount = schools?.filter((s) => s.status === 1).length ?? 0;
-  const graceCount = schools?.filter((s) => s.status === 2).length ?? 0;
-  const expiredCount = schools?.filter((s) => s.status === 3).length ?? 0;
+  const { active: activeCount, grace: graceCount, expired: expiredCount } = schoolStatusCounts(schools ?? []);
 
   return (
     <div className="space-y-4">

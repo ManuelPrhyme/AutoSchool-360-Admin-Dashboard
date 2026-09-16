@@ -6,11 +6,60 @@ import { deactivateCode, contractErrorDetail } from '../lib/writes';
 import { CopyButton, ShareButton } from '../components/CopyShareButtons';
 import { LastUpdated } from '../components/LastUpdated';
 import { DataCard, DataCardRow } from '../components/DataCard';
+import {
+  pct,
+  codeStateCounts,
+  applyCodeFilter,
+  parseCodeFilter,
+  searchCodes,
+  hasActiveViewState,
+  type CodeFilter,
+} from '../lib/kpi';
 import { useContractEvents } from '../hooks/useContractEvents';
 
-/** Percentage of total, rounded to a useful precision. Returns '—' when total is 0. */
-const pct = (part: number, total: number): string =>
-  total === 0 ? '—' : `${Math.round((part / total) * 100)}%`;
+const FILTER_TABS: { id: CodeFilter; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'valid', label: 'Unused' },
+  { id: 'used', label: 'Consumed' },
+];
+
+const FILTER_STORAGE_KEY = 'autoschool360.codesFilter';
+const SEARCH_STORAGE_KEY = 'autoschool360.codesSearch';
+
+/** Best-effort localStorage read; returns null on any failure (private mode,
+ * disabled storage). */
+function safeGetStoredFilter(): unknown {
+  try {
+    return localStorage.getItem(FILTER_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function safeStoreFilter(next: CodeFilter) {
+  try {
+    localStorage.setItem(FILTER_STORAGE_KEY, next);
+  } catch {
+    /* storage unavailable — persistence is best-effort */
+  }
+}
+
+/** Best-effort localStorage read for the persisted search query. */
+function safeGetStoredSearch(): string {
+  try {
+    return localStorage.getItem(SEARCH_STORAGE_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function safeStoreSearch(next: string) {
+  try {
+    localStorage.setItem(SEARCH_STORAGE_KEY, next);
+  } catch {
+    /* best-effort */
+  }
+}
 
 export function CodesPage({ walletClient, account }: { walletClient: WalletClient | null; account: LocalAccount | null }) {
   const [codes, setCodes] = useState<CodeRow[] | null>(null);
@@ -19,6 +68,8 @@ export function CodesPage({ walletClient, account }: { walletClient: WalletClien
   const [busy, setBusy] = useState(false);
   const [deactivating, setDeactivating] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
+  const [filter, setFilter] = useState<CodeFilter>(() => parseCodeFilter(safeGetStoredFilter()));
+  const [query, setQuery] = useState<string>(() => safeGetStoredSearch());
 
   // WebSocket event listener for real-time updates
   useContractEvents({
@@ -31,12 +82,12 @@ export function CodesPage({ walletClient, account }: { walletClient: WalletClien
     setBusy(true);
     setError(null);
     try {
-      const codes = await fetchAllCodes();
-      const schools = await fetchAllSchools();
+      const rows = await fetchAllCodes();
+      const schoolRows = await fetchAllSchools();
       // Sort codes by expiresAt descending (most recently generated first)
-      codes.sort((a, b) => (b.expiresAt > a.expiresAt ? 1 : b.expiresAt < a.expiresAt ? -1 : 0));
-      setCodes(codes);
-      setSchools(schools);
+      rows.sort((a, b) => (b.expiresAt > a.expiresAt ? 1 : b.expiresAt < a.expiresAt ? -1 : 0));
+      setCodes(rows);
+      setSchools(schoolRows);
       setUpdatedAt(new Date());
     } catch (e) {
       setError((e as Error)?.message ?? String(e));
@@ -49,14 +100,13 @@ export function CodesPage({ walletClient, account }: { walletClient: WalletClien
     refresh().catch(() => undefined);
   }, [refresh]);
 
-  // Prefetching the rest of the information and crossing it out on the scope of creation and admin
-  // Attibution to the crosser and deployer for the scale of the contract is only going to be
-  // Scaled for the distance of the divider
-
-  const schoolNameByAddr = (addr: Address): string => {
-    const s = schools.find((s) => s.address.toLowerCase() === addr.toLowerCase());
-    return s?.name || '(unnamed)';
-  };
+  const schoolNameByAddr = useCallback(
+    (addr: Address): string => {
+      const s = schools.find((s) => s.address.toLowerCase() === addr.toLowerCase());
+      return s?.name || '(unnamed)';
+    },
+    [schools],
+  );
 
   async function onDeactivate(code: string) {
     if (!walletClient || !account) return;
@@ -73,8 +123,36 @@ export function CodesPage({ walletClient, account }: { walletClient: WalletClien
   }
 
   // KPI headline — state of the code inventory at a glance
-  const validCount = codes?.filter((c) => c.isActive).length ?? 0;
-  const usedCount = codes ? codes.length - validCount : 0;
+  const { valid: validCount, used: usedCount } = codeStateCounts(codes ?? []);
+  const filtered = codes ? applyCodeFilter(codes, filter) : null;
+  const shownCodes = codes && filtered ? searchCodes(filtered, query, schoolNameByAddr) : null;
+  const shownCount = shownCodes?.length ?? 0;
+
+  /** Persist the filter selection so it survives page switches and reloads. */
+  const setFilterPersisted = useCallback((next: CodeFilter) => {
+    setFilter(next);
+    safeStoreFilter(next);
+  }, []);
+
+  /** Persist the search query alongside the filter. */
+  const setQueryPersisted = useCallback((next: string) => {
+    setQuery(next);
+    safeStoreSearch(next);
+  }, []);
+
+  /** Clicking a KPI card applies its matching filter and clears any active
+   * search (guidelines: connect the headline to the action). */
+  const applyFilterAndClearSearch = useCallback((next: CodeFilter) => {
+    setFilterPersisted(next);
+    setQueryPersisted('');
+  }, [setFilterPersisted, setQueryPersisted]);
+
+  /** One tap back to the pristine view: default filter, empty search. */
+  const resetViewState = useCallback(() => {
+    applyFilterAndClearSearch('all');
+  }, [applyFilterAndClearSearch]);
+
+  const viewStateIsActive = hasActiveViewState(filter, query);
 
   return (
     <div className="space-y-4">
@@ -85,24 +163,97 @@ export function CodesPage({ walletClient, account }: { walletClient: WalletClien
         <LastUpdated at={updatedAt} onRefresh={() => void refresh()} busy={busy} />
       </div>
 
-      {/* KPI strip — status first (inverted pyramid) */}
+      {/* KPI strip — status first (inverted pyramid). Cards are buttons that
+          apply their matching filter and clear any active search. */}
       {codes && codes.length > 0 && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <div className="kpi-card">
+          <button
+            onClick={() => applyFilterAndClearSearch('all')}
+            className="kpi-card text-left transition hover:opacity-90"
+            aria-label={`Show all ${codes.length} codes`}
+          >
             <div className="kpi-label">Total codes</div>
             <div className="kpi-value">{codes.length}</div>
-          </div>
-          <div className="kpi-card">
+            <div className="kpi-hint">{shownCount} shown</div>
+          </button>
+          <button
+            onClick={() => applyFilterAndClearSearch('valid')}
+            className="kpi-card text-left transition hover:opacity-90"
+            aria-label={`Filter to ${validCount} unused/valid codes`}
+          >
             <div className="kpi-label">Unused / valid</div>
             <div className="kpi-value text-ok-text">{validCount}</div>
             <div className="kpi-hint">{pct(validCount, codes.length)} of all codes</div>
-          </div>
-          <div className="kpi-card">
+          </button>
+          <button
+            onClick={() => applyFilterAndClearSearch('used')}
+            className="kpi-card text-left transition hover:opacity-90"
+            aria-label={`Filter to ${usedCount} consumed codes`}
+          >
             <div className="kpi-label">Consumed</div>
             <div className="kpi-value text-danger-text">{usedCount}</div>
             <div className="kpi-hint">{pct(usedCount, codes.length)} of all codes</div>
-          </div>
+          </button>
         </div>
+      )}
+
+      {/* Search — DataCamp: filters above content, plain labels, 44px target */}
+      {codes && codes.length > 0 && (
+        <label className="block">
+          <span className="kpi-label">Search by code or school name</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQueryPersisted(e.target.value)}
+            placeholder="e.g. ACT-2367 or Lincoln High"
+            className="field-input mt-1"
+            aria-label="Search codes by code text or school name"
+          />
+        </label>
+      )}
+
+      {/* Filter — DataCamp: "five precise filters beat fifteen vague ones". */}
+      {codes && codes.length > 0 && (
+        <div
+          className="grid grid-cols-3 gap-1 rounded-lg p-1 sm:inline-grid sm:w-auto"
+          style={{ backgroundColor: 'var(--color-surface-card)', border: '1px solid var(--color-surface-border)' }}
+          role="tablist"
+          aria-label="Filter codes by state"
+        >
+          {FILTER_TABS.map((t) => {
+            const active = filter === t.id;
+            const count = t.id === 'all' ? codes.length : t.id === 'valid' ? validCount : usedCount;
+            return (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setFilterPersisted(t.id)}
+                className="min-h-[44px] rounded-md px-3 text-sm font-semibold transition"
+                style={
+                  active
+                    ? { backgroundColor: 'var(--color-brand-base)', color: 'var(--color-ink-primary)' }
+                    : { color: 'var(--color-ink-secondary)' }
+                }
+              >
+                {t.label} <span className="text-xs opacity-80">({count})</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Reset — one tap back to the pristine view; only rendered when the
+          view is actually narrowed (Toptal: enabled/disabled states must be
+          meaningful). */}
+      {codes && codes.length > 0 && viewStateIsActive && (
+        <button
+          onClick={resetViewState}
+          className="btn-outline text-sm"
+          aria-label="Reset filter and search to show all codes"
+        >
+          ✕ Clear filter & search
+        </button>
       )}
 
       {error && <div className="alert-danger">{error}</div>}
@@ -111,11 +262,19 @@ export function CodesPage({ walletClient, account }: { walletClient: WalletClien
         <p className="text-ink-muted">No activation codes have been generated yet.</p>
       )}
 
-      {codes && codes.length > 0 && (
+      {codes && shownCodes && shownCodes.length === 0 && codes.length > 0 && (
+        <p className="text-ink-muted">
+          {query.trim()
+            ? `No codes match "${query.trim()}"`
+            : `No ${filter === 'used' ? 'consumed' : 'unused'} codes right now — switch filters or refresh.`}
+        </p>
+      )}
+
+      {codes && codes.length > 0 && shownCodes && shownCodes.length > 0 && (
         <>
           {/* Mobile: stacked cards — one card per code, no horizontal scroll */}
           <div className="space-y-2 md:hidden">
-            {codes.map((c) => (
+            {shownCodes.map((c) => (
               <DataCard
                 key={c.code}
                 footer={
@@ -188,7 +347,7 @@ export function CodesPage({ walletClient, account }: { walletClient: WalletClien
                 </tr>
               </thead>
               <tbody className="table-body">
-                {codes.map((c) => (
+                {shownCodes.map((c) => (
                   <tr key={c.code} className="hover:bg-surface-hover">
                     <td className="table-cell">
                       <div className="flex items-center gap-2">
@@ -232,11 +391,11 @@ export function CodesPage({ walletClient, account }: { walletClient: WalletClien
                           <button
                             onClick={() => onDeactivate(c.code)}
                             disabled={deactivating === c.code}
-                          className="btn-outline text-xs"
-                          style={{ color: 'var(--color-danger-text)' }}
-                        >
-                          {deactivating === c.code ? 'Deactivating…' : 'Deactivate'}
-                        </button>
+                            className="btn-outline text-xs"
+                            style={{ color: 'var(--color-danger-text)' }}
+                          >
+                            {deactivating === c.code ? 'Deactivating…' : 'Deactivate'}
+                          </button>
                         )}
                       </div>
                     </td>
