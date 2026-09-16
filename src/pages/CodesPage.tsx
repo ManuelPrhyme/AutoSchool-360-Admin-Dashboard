@@ -4,6 +4,7 @@ import { formatDuration, shortAddress } from '../lib/chain';
 import { fetchAllCodes, fetchAllSchools, type CodeRow, type SchoolRow } from '../lib/coreReads';
 import { deactivateCode, contractErrorDetail } from '../lib/writes';
 import { CopyButton, ShareButton } from '../components/CopyShareButtons';
+import { useContractEvents } from '../hooks/useContractEvents';
 
 export function CodesPage({ walletClient, account }: { walletClient: WalletClient | null; account: LocalAccount | null }) {
   const [codes, setCodes] = useState<CodeRow[] | null>(null);
@@ -12,12 +13,21 @@ export function CodesPage({ walletClient, account }: { walletClient: WalletClien
   const [busy, setBusy] = useState(false);
   const [deactivating, setDeactivating] = useState<string | null>(null);
 
+  // WebSocket event listener for real-time updates
+  useContractEvents({
+    onCodeGenerated: () => refresh(),
+    onLicenseActivated: () => refresh(),
+    onCodeDeactivated: () => refresh(),
+  });
+
   const refresh = useCallback(async () => {
     setBusy(true);
     setError(null);
     try {
       const codes = await fetchAllCodes();
       const schools = await fetchAllSchools();
+      // Sort codes by expiresAt descending (most recently generated first)
+      codes.sort((a, b) => (b.expiresAt > a.expiresAt ? 1 : b.expiresAt < a.expiresAt ? -1 : 0));
       setCodes(codes);
       setSchools(schools);
     } catch (e) {
@@ -30,6 +40,10 @@ export function CodesPage({ walletClient, account }: { walletClient: WalletClien
   useEffect(() => {
     refresh().catch(() => undefined);
   }, [refresh]);
+
+  // Prefetching the rest of the information and crossing it out on the scope of creation and admin
+  // Attibution to the crosser and deployer for the scale of the contract is only going to be 
+  // Scaled for the distance of the divider
 
   const schoolNameByAddr = (addr: Address): string => {
     const s = schools.find((s) => s.address.toLowerCase() === addr.toLowerCase());

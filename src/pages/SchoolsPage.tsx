@@ -3,11 +3,19 @@ import type { Address } from 'viem';
 import { formatDuration, LICENSE_STATUS } from '../lib/chain';
 import { fetchAllSchools, type SchoolRow } from '../lib/coreReads';
 import { StatusBadge } from '../components/StatusBadge';
+import { useContractEvents } from '../hooks/useContractEvents';
 
 export function SchoolsPage({ onRegenerate }: { onRegenerate: (school: Address) => void }) {
   const [schools, setSchools] = useState<SchoolRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // WebSocket event listener for real-time updates
+  useContractEvents({
+    onSchoolRegistered: () => refresh(),
+    onLicenseActivated: () => refresh(),
+    onCodeDeactivated: () => refresh(),
+  });
 
   const refresh = useCallback(async () => {
     setBusy(true);

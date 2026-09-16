@@ -4,6 +4,8 @@ import { fetchAllSchools, type SchoolRow } from '../lib/coreReads';
 import { generateCode, contractErrorDetail } from '../lib/writes';
 import { usePrivyAccount } from '../hooks/useTurnkeyAccount';
 import { CopyButton, ShareButton } from '../components/CopyShareButtons';
+import { formatDuration } from '../lib/chain';
+import { useContractEvents } from '../hooks/useContractEvents';
 
 export function GenerateCodePage({ walletClient, prefillSchool, onGenerated }: { walletClient: WalletClient | null; prefillSchool: Address | null; onGenerated: () => void }) {
   const { account } = usePrivyAccount();
