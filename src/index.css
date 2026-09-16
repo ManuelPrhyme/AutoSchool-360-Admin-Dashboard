@@ -39,14 +39,23 @@
     background-color: var(--color-surface-base);
     color: var(--color-ink-primary);
   }
+
+  /* Accessibility: visible focus ring for keyboard users (DataCamp:
+     "back up color with a second cue"). */
+  :where(button, a, select, input, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-brand-soft);
+    outline-offset: 2px;
+  }
 }
 
 /* ── All component classes defined here use only Tailwind utilities ── */
 
 @layer components {
   /* Buttons */
+  /* Buttons — every button meets the 44px minimum touch target
+     (Toptal: Apple 44x44pt / Android 48x48dp; safest is 44–48px). */
   .btn-brand {
-    @apply rounded-lg px-4 py-3 font-semibold text-white transition;
+    @apply min-h-[44px] rounded-lg px-4 py-2.5 font-semibold text-white transition;
     background-color: var(--color-brand-base);
   }
   .btn-brand:hover {
@@ -54,7 +63,7 @@
   }
 
   .btn-neutral {
-    @apply rounded-lg px-3 py-1.5 font-semibold text-white transition;
+    @apply min-h-[44px] rounded-lg px-4 py-2 font-semibold text-white transition;
     background-color: var(--color-neutral-base, #64748b);
   }
   .btn-neutral:hover {
@@ -62,9 +71,35 @@
   }
 
   .btn-outline {
-    @apply rounded-lg border px-3 py-2 font-medium transition;
+    @apply min-h-[44px] rounded-lg border px-3 py-2 font-medium transition;
     border-color: currentColor;
     color: inherit;
+  }
+
+  /* Explicit 44x44px minimum hit area for icon-only controls. */
+  .tap-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* KPI stat card — the "top of the inverted pyramid"
+     (DataCamp/Medium: status and targets first). */
+  .kpi-card {
+    @apply rounded-xl p-4;
+    background-color: var(--color-surface-card);
+    border: 1px solid var(--color-surface-border);
+  }
+  .kpi-label {
+    @apply text-xs uppercase tracking-wide;
+    color: var(--color-ink-secondary);
+  }
+  .kpi-value {
+    @apply mt-1 text-xl font-bold sm:text-2xl;
+    color: var(--color-ink-primary);
+  }
+  .kpi-hint {
+    @apply mt-0.5 truncate text-xs;
+    color: var(--color-ink-muted);
   }
   .btn-outline:hover {
     background-color: var(--color-surface-hover);
@@ -127,7 +162,9 @@
 
   /* Table standard cells (see AutoTable/Table.md §3: header and row cells
      share one padding token so columns stay aligned; the gutter token
-     lives in the <colgroup> widths + the cell gap). */
+     lives in the <colgroup> widths + the cell gap).
+     Tables are desktop-only (hidden md:block); on phones rows collapse
+     into stacked cards (Toptal: "stacked, standalone cards" pattern). */
   .table-header-cell {
     @apply px-4 py-2.5 text-left align-middle;
   }

@@ -22,4 +22,19 @@ export default defineConfig({
     },
   },
   server: { port: 5173 },
+  build: {
+    rollupOptions: {
+      output: {
+        // Split the heavy web3 vendors out of the app entry so they download
+        // in parallel with page chunks and cache independently of app code.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (id.includes('viem') || id.includes('abitype')) return 'vendor-viem';
+          if (id.includes('@privy-io') || id.includes('@solana')) return 'vendor-privy';
+          if (id.includes('react') || id.includes('scheduler')) return 'vendor-react';
+          return undefined;
+        },
+      },
+    },
+  },
 })

@@ -4,7 +4,8 @@ import { fetchAllSchools, type SchoolRow } from '../lib/coreReads';
 import { generateCode, contractErrorDetail } from '../lib/writes';
 import { usePrivyAccount } from '../hooks/useTurnkeyAccount';
 import { CopyButton, ShareButton } from '../components/CopyShareButtons';
-import { formatDuration } from '../lib/chain';
+import { StatusBadge } from '../components/StatusBadge';
+import { DataCard, DataCardRow } from '../components/DataCard';
 import { useContractEvents } from '../hooks/useContractEvents';
 
 export function GenerateCodePage({ walletClient, prefillSchool, onGenerated }: { walletClient: WalletClient | null; prefillSchool: Address | null; onGenerated: () => void }) {
@@ -25,6 +26,10 @@ export function GenerateCodePage({ walletClient, prefillSchool, onGenerated }: {
   useEffect(() => { loadSchools(); }, [loadSchools]);
   useEffect(() => { if (prefillSchool) setSelectedSchool(prefillSchool); }, [prefillSchool]);
 
+  useContractEvents({
+    onSchoolRegistered: () => { void loadSchools(); },
+  });
+
   async function onSubmit() {
     if (!walletClient || !selectedSchool) return;
     setBusy(true); setError(null); setResult(null);
@@ -38,62 +43,90 @@ export function GenerateCodePage({ walletClient, prefillSchool, onGenerated }: {
     } catch (e) { setError(contractErrorDetail(e)); }
     finally { setBusy(false); }
   }
+
   return (
     <div className="max-w-xl space-y-6">
-      <h2 className="text-lg font-semibold text-white">Generate Activation Code</h2>
-      <p className="text-sm text-slate-400">Creates a one-time-use code in the format <span className="font-mono text-xs">ACT-236785-4024</span> valid for <span className="font-semibold text-amber-300">1 hour only</span> (until used). The school must activate it within 1 hour of generation — generate it right before handing it over. License + grace period begin when the school activates it.</p>
+      <div>
+        <h2 className="text-lg font-semibold text-ink-primary">Generate Activation Code</h2>
+        <p className="mt-1 text-sm text-ink-secondary">
+          Creates a one-time-use code in the format <span className="code-mono">ACT-236785-4024</span> valid
+          for <span className="font-semibold text-warn-text">1 hour only</span> (until used). The school must
+          activate it within 1 hour of generation — generate it right before handing it over. License +
+          grace period begin when the school activates it.
+        </p>
+      </div>
 
-      {/* Registered schools list */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+      {/* Registered schools — stacked cards on mobile (no horizontal scroll),
+          table on desktop. Same data, two presentations (Toptal). */}
+      <div className="card">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-white">Registered schools</h3>
-          <span className="text-xs text-slate-500">{schools.length} total</span>
+          <h3 className="text-sm font-semibold text-ink-primary">Registered schools</h3>
+          <span className="text-xs text-ink-muted">{schools.length} total</span>
         </div>
         {schools.length === 0 ? (
-          <p className="text-sm text-slate-500">No schools registered on-chain yet.</p>
+          <p className="text-sm text-ink-muted">No schools registered on-chain yet.</p>
         ) : (
-          <div className="max-h-72 overflow-auto rounded-lg border border-slate-800">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-slate-900 text-xs uppercase text-slate-400">
-                <tr><th className="px-3 py-2">School</th><th className="px-3 py-2">Address</th><th className="px-3 py-2">Status</th></tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800 bg-slate-950/40 text-slate-200">
-                {schools.map(s => (
-                  <tr key={s.address} className="hover:bg-slate-800/50">
-                    <td className="px-3 py-2"><div className="font-medium">{s.name || "(unnamed)"}</div><div className="text-xs text-slate-500">{s.email}</div></td>
-                    <td className="px-3 py-2 font-mono text-xs text-slate-400">{s.address}</td>
-                    <td className="px-3 py-2">
-                      {s.status===0 ? (<span className="rounded-full bg-slate-700 px-2 py-0.5 text-xs font-semibold text-slate-300">Not licensed</span>) : s.status===1 ? (<span className="rounded-full bg-emerald-900/60 px-2 py-0.5 text-xs font-semibold text-emerald-300 border border-emerald-700">Active</span>) : s.status===2 ? (<span className="rounded-full bg-amber-900/60 px-2 py-0.5 text-xs font-semibold text-amber-300 border border-amber-700">Grace period</span>) : (<span className="rounded-full bg-rose-900/60 px-2 py-0.5 text-xs font-semibold text-rose-300 border border-rose-700">Expired</span>)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            {/* Mobile stacked cards */}
+            <div className="max-h-72 space-y-2 overflow-auto md:hidden">
+              {schools.map(s => (
+                <DataCard key={s.address}>
+                  <div className="flex items-center justify-between gap-2 pb-1">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold text-ink-primary">{s.name || '(unnamed)'}</div>
+                      <div className="truncate text-xs text-ink-secondary">{s.email}</div>
+                    </div>
+                    <StatusBadge status={s.status} />
+                  </div>
+                  <DataCardRow label="Address" value={s.address} mono />
+                </DataCard>
+              ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden max-h-72 overflow-auto rounded-lg md:block" style={{ border: '1px solid var(--color-surface-border)' }}>
+              <table className="min-w-full text-left text-sm">
+                <thead className="table-head">
+                  <tr><th className="px-3 py-2">School</th><th className="px-3 py-2">Address</th><th className="px-3 py-2">Status</th></tr>
+                </thead>
+                <tbody className="table-body">
+                  {schools.map(s => (
+                    <tr key={s.address} className="hover:bg-surface-hover">
+                      <td className="px-3 py-2"><div className="font-medium text-ink-primary">{s.name || '(unnamed)'}</div><div className="text-xs text-ink-secondary">{s.email}</div></td>
+                      <td className="code-mono px-3 py-2">{s.address}</td>
+                      <td className="px-3 py-2"><StatusBadge status={s.status} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
-      <label className="block text-sm"><span className="text-slate-300">Registered school</span>
-        <select value={selectedSchool} onChange={e => setSelectedSchool(e.target.value as Address)} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white">
+      <label className="field-label"><span>Registered school</span>
+        <select value={selectedSchool} onChange={e => setSelectedSchool(e.target.value as Address)} className="field-input">
           <option value="">— select a school —</option>
-          {schools.map(s => <option key={s.address} value={s.address}>{s.name || "(unnamed)"} — {s.address}</option>)}
+          {schools.map(s => <option key={s.address} value={s.address}>{s.name || '(unnamed)'} — {s.address}</option>)}
         </select>
       </label>
 
-      <div className="grid grid-cols-2 gap-4">
-        <label className="block text-sm"><span className="text-slate-300">License period (days)</span><input type="number" min={1} value={periodDays} onChange={e => setPeriodDays(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
-        <label className="block text-sm"><span className="text-slate-300">Grace period (days)</span><input type="number" min={0} value={graceDays} onChange={e => setGraceDays(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <label className="field-label"><span>License period (days)</span><input type="number" min={1} inputMode="numeric" value={periodDays} onChange={e => setPeriodDays(e.target.value)} className="field-input" /></label>
+        <label className="field-label"><span>Grace period (days)</span><input type="number" min={0} inputMode="numeric" value={graceDays} onChange={e => setGraceDays(e.target.value)} className="field-input" /></label>
       </div>
 
-      <button onClick={onSubmit} disabled={!walletClient || !selectedSchool || busy} className="w-full rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-50">{busy ? "Generating… (confirm in your embedded wallet)" : "Generate code"}</button>
+      <button onClick={onSubmit} disabled={!walletClient || !selectedSchool || busy} className="btn-brand w-full">
+        {busy ? 'Generating… (confirm in your embedded wallet)' : 'Generate code'}
+      </button>
 
-      {error && <div className="rounded-lg bg-rose-900/40 px-4 py-3 text-sm text-rose-300">{error}</div>}
+      {error && <div className="alert-danger">{error}</div>}
 
       {result && (
-        <div className="rounded-xl border border-emerald-800 bg-emerald-900/30 p-5">
-          <p className="text-xs uppercase tracking-wide text-emerald-400">Code generated ✓</p>
+        <div className="alert-ok">
+          <p className="kpi-label">Code generated ✓</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <code className="min-w-0 flex-1 break-all rounded-lg bg-slate-950 px-3 py-2 font-mono text-sm text-emerald-300">{result.code ?? "(code unavailable — check event)"}</code>
+            <code className="min-w-0 flex-1 break-all rounded-lg px-3 py-2 font-mono text-sm text-ok-text" style={{ backgroundColor: 'var(--color-surface-base)' }}>{result.code ?? '(code unavailable — check event)'}</code>
             {result.code && (
               <>
                 <CopyButton text={result.code} />
@@ -101,8 +134,8 @@ export function GenerateCodePage({ walletClient, prefillSchool, onGenerated }: {
               </>
             )}
           </div>
-          <p className="mt-2 font-mono text-xs text-slate-500">tx: {result.txHash}</p>
-          <p className="mt-2 text-xs text-slate-400">Copy or share this code with the school — they enter it in the AutoTable app to activate.</p>
+          <p className="mt-2 break-all font-mono text-xs text-ink-muted">tx: {result.txHash}</p>
+          <p className="mt-2 text-xs text-ink-secondary">Copy or share this code with the school — they enter it in the AutoTable app to activate.</p>
         </div>
       )}
     </div>

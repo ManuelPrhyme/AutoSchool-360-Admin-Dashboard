@@ -70,6 +70,7 @@ interface ShareButtonProps {
   title?: string;
   shareMessage?: string;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 /**
@@ -81,6 +82,7 @@ export function ShareButton({
   title = 'Activation code',
   shareMessage,
   className = 'rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-70',
+  style,
 }: ShareButtonProps) {
   const { copied, copy } = useCopyToClipboard();
   const message = shareMessage ?? `Your AutoSchool360 activation code: ${text}`;
@@ -100,7 +102,7 @@ export function ShareButton({
   }
 
   return (
-    <button onClick={onShare} className={className} title="Share this code">
+    <button onClick={onShare} className={className} style={style} title="Share this code">
       {copied ? 'Copied — paste to share ✓' : 'Share'}
     </button>
   );

@@ -29,6 +29,7 @@ export function WalletPage() {
   const [copied, setCopied] = useState(false);
   const [creatingWallet, setCreatingWallet] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
 
   // Loads the faucet balance (public on-chain data, independent of the user's wallet).
   const loadFaucetBalance = useCallback(async () => {
@@ -135,25 +136,34 @@ export function WalletPage() {
     }
   }, [createEmbeddedWallet]);
 
+  const stampFresh = useCallback(() => setUpdatedAt(new Date()), []);
+
+  useEffect(() => {
+    stampFresh();
+  }, [balance, faucetBalance, stampFresh]);
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Wallet & Gas</h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <p className="mt-1 text-sm text-ink-secondary">
           Your embedded admin wallet. Gas for on-chain operations comes from the faucet.
         </p>
+        {updatedAt && (
+          <p className="mt-1 text-xs text-ink-muted">Updated {updatedAt.toLocaleTimeString()}</p>
+        )}
       </div>
 
       {loading && (
-        <div className="rounded-xl border border-amber-700/50 bg-amber-900/20 p-4 text-sm text-amber-200">
+        <div className="alert-warn">
           Provisioning embedded wallet...
         </div>
       )}
 
       {isAuthenticated && !hasEmbeddedWallet && !loading && (
-        <div className="rounded-2xl border border-amber-700/50 bg-amber-900/20 p-5">
-          <p className="text-sm font-semibold text-amber-200">Create your admin wallet</p>
-          <p className="mt-1 text-xs text-amber-200/80">
+        <div className="alert-warn">
+          <p className="font-semibold">Create your admin wallet</p>
+          <p className="mt-1 text-xs opacity-90">
             You're signed in, but this account has no embedded wallet yet. The dashboard signs
             every on-chain action (generate codes, deactivate, gas requests) with a Privy embedded
             wallet — create one to unlock those actions.
@@ -161,102 +171,96 @@ export function WalletPage() {
           <button
             onClick={() => void onCreateWallet()}
             disabled={creatingWallet}
-            className="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-brand mt-3 w-full sm:w-auto"
           >
             {creatingWallet ? 'Creating wallet…' : 'Create embedded wallet'}
           </button>
           {walletError && (
-            <p className="mt-2 break-all text-xs text-amber-200/90">{walletError}</p>
+            <p className="mt-2 break-all text-xs opacity-90">{walletError}</p>
           )}
         </div>
       )}
 
-      {/* Wallet card */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
+      {/* Wallet card — KPI balances first (inverted pyramid top layer) */}
+      <div className="card">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="text-xs uppercase tracking-wide text-slate-400">Embedded wallet</div>
-            <div className="mt-1 font-mono text-lg text-indigo-300">{address ?? 'provisioning...'}</div>
-            <div className="mt-1 text-xs text-slate-400">{email ?? '—'}</div>
+          <div className="min-w-0">
+            <div className="kpi-label">Embedded wallet</div>
+            <div className="mt-1 font-mono text-sm text-brand sm:text-lg">{address ?? 'provisioning...'}</div>
+            <div className="mt-1 text-xs text-ink-secondary">{email ?? '—'}</div>
           </div>
           {address && (
-            <button
-              onClick={copyAddress}
-              className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-300 transition hover:bg-slate-800"
-            >
-              {copied ? 'âœ“ Copied' : 'Copy address'}
+            <button onClick={copyAddress} className="btn-outline text-xs">
+              {copied ? '✓ Copied' : 'Copy address'}
             </button>
           )}
         </div>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl bg-slate-950/60 p-4">
-            <div className="text-xs text-slate-400">This wallet's balance</div>
-            <div className="mt-1 text-2xl font-bold">
-              {balance === null ? '—' : `${formatEth(balance)} ETH`}
-            </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="kpi-card">
+            <div className="kpi-label">This wallet's balance</div>
+            <div className="kpi-value">{balance === null ? '—' : `${formatEth(balance)} ETH`}</div>
           </div>
-          <div className="rounded-xl bg-slate-950/60 p-4">
-            <div className="text-xs text-slate-400">Faucet contract balance</div>
-            <div className="mt-1 text-2xl font-bold">
+          <div className="kpi-card">
+            <div className="kpi-label">Faucet contract balance</div>
+            <div className="kpi-value">
               {faucetBalanceError
-                ? `Error: ${faucetBalanceError}`
+                ? 'Error'
                 : faucetBalance === null
                 ? '—'
                 : `${formatEth(faucetBalance)} ETH`}
             </div>
+            {faucetBalanceError && (
+              <div className="kpi-hint break-all text-danger-text">{faucetBalanceError}</div>
+            )}
           </div>
 
           {roles.vendor && (
-            <div className="rounded-xl bg-slate-950/60 p-4">
-              <div className="text-xs text-slate-400">Vendor ETH balance</div>
-              <div className="mt-1 text-2xl font-bold">
-                {vendorBalance === null ? '—' : `${formatEth(vendorBalance)} ETH`}
-              </div>
+            <div className="kpi-card">
+              <div className="kpi-label">Vendor ETH balance</div>
+              <div className="kpi-value">{vendorBalance === null ? '—' : `${formatEth(vendorBalance)} ETH`}</div>
             </div>
           )}
         </div>
       </div>
 
       {/* Role card */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
-        <div className="text-xs uppercase tracking-wide text-slate-400">
-          On-chain roles (AutoSchool360 core)
-        </div>
+      <div className="card">
+        <div className="kpi-label">On-chain roles (AutoSchool360 core)</div>
         <div className="mt-3 space-y-2 text-sm">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="w-20 font-semibold text-slate-300">Vendor:</span>
-            <span className="font-mono text-slate-400">{roles.vendor ?? '…'}</span>
+            <span className="w-20 shrink-0 font-semibold text-ink-primary">Vendor:</span>
+            <span className="code-mono break-all">{roles.vendor ?? '…'}</span>
             {isVendor && (
-              <span className="rounded bg-emerald-900/60 px-2 py-0.5 text-xs text-emerald-300">you</span>
+              <span className="badge-ok">you</span>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="w-20 font-semibold text-slate-300">Delegate:</span>
-            <span className="font-mono text-slate-400">
+            <span className="w-20 shrink-0 font-semibold text-ink-primary">Delegate:</span>
+            <span className="code-mono break-all">
               {roles.delegate && roles.delegate !== ZERO ? roles.delegate : 'not assigned'}
             </span>
             {isDelegate && (
-              <span className="rounded bg-emerald-900/60 px-2 py-0.5 text-xs text-emerald-300">you</span>
+              <span className="badge-ok">you</span>
             )}
           </div>
         </div>
 
         {!isVendor && !isDelegate && address !== null && rolesKnown && (
-          <div className="mt-4 rounded-xl border border-amber-700/50 bg-amber-900/20 p-4 text-sm text-amber-200">
+          <div className="alert-warn mt-4">
             This wallet is not the vendor or delegate yet. The vendor must call{' '}
-            <code className="font-mono text-amber-200">setDelegate({address})</code> once so this
+            <code className="font-mono">setDelegate({address})</code> once so this
             wallet can generate and deactivate codes.
           </div>
         )}
       </div>
 
-      {/* Gas card */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+      {/* Gas card — primary action, full-width tap target on mobile */}
+      <div className="card">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="text-sm font-semibold">Request gas from faucet</div>
-            <div className="mt-1 text-xs text-slate-400">
+            <div className="text-sm font-semibold text-ink-primary">Request gas from faucet</div>
+            <div className="mt-1 text-xs text-ink-secondary">
               Signs a gas request with your embedded wallet; the faucet server drips ETH to this
               address and only confirms after the transfer is mined on-chain.
             </div>
@@ -264,19 +268,19 @@ export function WalletPage() {
           <button
             onClick={() => void requestGas()}
             disabled={!account || gasState.kind === 'requesting'}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-brand w-full sm:w-auto"
           >
             {gasState.kind === 'requesting' ? 'Requesting…' : 'Request gas'}
           </button>
         </div>
 
         {gasState.kind === 'ok' && (
-          <div className="mt-4 rounded-xl border border-emerald-700/50 bg-emerald-900/20 p-4 text-sm text-emerald-200">
+          <div className="alert-ok mt-4">
             Funds sent ✓ tx: <span className="font-mono break-all">{gasState.txHash}</span>
           </div>
         )}
         {gasState.kind === 'error' && (
-          <div className="mt-4 rounded-xl border border-red-700/50 bg-red-900/20 p-4 text-sm text-red-200">
+          <div className="alert-danger mt-4">
             Gas request failed: {gasState.message}
           </div>
         )}
@@ -284,8 +288,3 @@ export function WalletPage() {
     </div>
   );
 }
-
-
-
-
-
