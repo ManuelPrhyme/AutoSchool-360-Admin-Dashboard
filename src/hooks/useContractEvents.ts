@@ -99,11 +99,14 @@ function decodeContractEvent(log: { topics: Hex[]; data: Hex; address: string })
     for (const ev of events) {
       try {
         const eventOnlyAbi = [{ ...ev, anonymous: false, type: 'event' }];
-        const mockLog = { topics: log.topics, data: log.data, address: log.address } as Parameters<typeof decodeEventLog>[0]['log'];
-        const decoded = decodeEventLog({ abi: eventOnlyAbi, log: mockLog });
+        const decoded = decodeEventLog({
+          abi: eventOnlyAbi,
+          data: log.data,
+          topics: log.topics as [Hex, ...Hex[]]
+        });
         
-        if (decoded.name === ev.name) {
-          const args = decoded.args as Record<string, unknown>;
+        if (decoded.eventName === ev.name) {
+          const args = (decoded.args ?? {}) as unknown as Record<string, unknown>;
           
           if (ev.name === 'SchoolRegistered') {
             return {
